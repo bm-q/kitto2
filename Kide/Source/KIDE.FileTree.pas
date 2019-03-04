@@ -169,7 +169,7 @@ type
   TViewsFolderNodeHandler = class(TGenericFolderNodeHandler)
   private
     procedure ExecuteNewAction(const AContext: IEditContext;
-      const AAction: TFileAction; const ASelection: TFileNodeHandlerList);
+      const ADisplayLabel: string; const AImageIndex: Integer; const ASelection: TFileNodeHandlerList);
   protected
     procedure InitActions; override;
   end;
@@ -916,7 +916,7 @@ end;
 { TViewsFolderNodeHandler }
 
 procedure TViewsFolderNodeHandler.ExecuteNewAction(const AContext: IEditContext;
-  const AAction: TFileAction; const ASelection: TFileNodeHandlerList);
+  const ADisplayLabel: string; const AImageIndex: Integer; const ASelection: TFileNodeHandlerList);
 var
   LDialog: TSaveDialog;
   LView: TKView;
@@ -929,14 +929,14 @@ begin
 
   LDialog := TSaveDialog.Create(nil);
   try
-    LDialog.Title := AAction.DisplayLabel + ' - ' + _('Name the new View');
+    LDialog.Title := ADisplayLabel + ' - ' + _('Name the new View');
     LDialog.InitialDir := (ASelection[0] as TGenericFolderNodeHandler).Path;
     LDialog.Options := [ofOverwritePrompt, ofNoChangeDir, ofPathMustExist, ofEnableSizing];
     LDialog.Filter := _('Yaml files (*.yaml)|*.yaml');
     LDialog.DefaultExt := '.yaml';
-    if AAction.ImageIndex = TREE_VIEW then
+    if AImageIndex = TREE_VIEW then
       LDialog.FileName := IncludeTrailingPathDelimiter(LDialog.InitialDir)+'MainMenu.yaml'
-    else if AAction.ImageIndex = HOME_VIEW then
+    else if AImageIndex = HOME_VIEW then
       LDialog.FileName := IncludeTrailingPathDelimiter(LDialog.InitialDir)+'Home.yaml';
     if LDialog.Execute then
     begin
@@ -944,7 +944,7 @@ begin
       try
         LView.PersistentName := ChangeFileExt(ExtractFileName(LDialog.FileName), '');
         LProject := TProject.CurrentProject;
-        if AAction.ImageIndex = TREE_VIEW then
+        if AImageIndex = TREE_VIEW then
         begin
           LView.SetString('Type', 'Tree');
           LView.SetString('Folder', 'Menu');
@@ -965,7 +965,7 @@ begin
           LChildNode := LNode.AddChild('View');
           LChildNode.SetString('Controller', 'Logout');
         end
-        else if AAction.ImageIndex = HOME_VIEW then
+        else if AImageIndex = HOME_VIEW then
         begin
           LView.LoadFromYamlFile(TKideConfig.Instance.MetadataTemplatePath +'HomeView.yaml');
         end;
@@ -984,39 +984,53 @@ end;
 procedure TViewsFolderNodeHandler.InitActions;
 var
   LNewAction, LNewTreeViewAction, LNewHomeViewAction: TFileAction;
+  // REF: http://docwiki.embarcadero.com/RADStudio/Rio/en/Anonymous_Methods_in_Delphi
+  // Bisogna prestare attenzione alle variabili che i metodi anomimi tengono in vita per evitare memory leak
+  // Bisogna oltretutto utilizzare variabili distinte per evitare sovrascritture tra i diversi metodi
+  LNewAction_Label, LNewTreeViewAction_Label, LNewHomeViewAction_Label: string;
+  LNewAction_Image, LNewTreeViewAction_Image, LNewHomeViewAction_Image: Integer;
 begin
   inherited;
-  LNewAction.Clear;
-  LNewAction.DisplayLabel := _('New View...');
+
+  LNewAction_Label := _('New View...');
+  LNewAction_Image := NEW_VIEW_PICTURE;
+
+  LNewAction.DisplayLabel := LNewAction_Label;
   LNewAction.Hint := _('Create a new empty View');
-  LNewAction.ImageIndex := NEW_VIEW_PICTURE;
+  LNewAction.ImageIndex := LNewAction_Image;
   LNewAction.RefreshAfterExecute := True;
   LNewAction.Proc :=
     procedure (AContext: IEditContext; ASelection: TFileNodeHandlerList)
     begin
-      ExecuteNewAction(AContext, LNewAction, ASelection);
+      ExecuteNewAction(AContext, LNewAction_Label, LNewAction_Image, ASelection);
     end;
   FActions.Add(LNewAction);
 
-  LNewTreeViewAction.DisplayLabel := _('New TreeView...');
+  LNewTreeViewAction_Label := _('New TreeView...');
+  LNewTreeViewAction_Image := TREE_VIEW;
+
+  LNewTreeViewAction.DisplayLabel := LNewTreeViewAction_Label;
   LNewTreeViewAction.Hint := _('Create a new empty TreeView for the menu');
-  LNewTreeViewAction.ImageIndex := TREE_VIEW;
+  LNewTreeViewAction.ImageIndex := LNewTreeViewAction_Image;
   LNewTreeViewAction.RefreshAfterExecute := True;
   LNewTreeViewAction.Proc :=
     procedure (AContext: IEditContext; ASelection: TFileNodeHandlerList)
     begin
-      ExecuteNewAction(AContext, LNewTreeViewAction, ASelection);
+      ExecuteNewAction(AContext, LNewTreeViewAction_Label, LNewTreeViewAction_Image, ASelection);
     end;
   FActions.Add(LNewTreeViewAction);
 
-  LNewHomeViewAction.DisplayLabel := _('New HomeView...');
+  LNewHomeViewAction_Label := _('New HomeView...');
+  LNewHomeViewAction_Image := HOME_VIEW;
+
+  LNewHomeViewAction.DisplayLabel := LNewHomeViewAction_Label;
   LNewHomeViewAction.Hint := _('Create a new classic HomeView for the application');
-  LNewHomeViewAction.ImageIndex := HOME_VIEW;
+  LNewHomeViewAction.ImageIndex := LNewHomeViewAction_Image;
   LNewHomeViewAction.RefreshAfterExecute := True;
   LNewHomeViewAction.Proc :=
     procedure (AContext: IEditContext; ASelection: TFileNodeHandlerList)
     begin
-      ExecuteNewAction(AContext, LNewHomeViewAction, ASelection);
+      ExecuteNewAction(AContext, LNewHomeViewAction_Label, LNewHomeViewAction_Image, ASelection);
     end;
   FActions.Add(LNewHomeViewAction);
 
